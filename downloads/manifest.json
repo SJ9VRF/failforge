@@ -1,0 +1,32 @@
+{
+  "project": "FAILFORGE",
+  "date": "2026-08-26",
+  "claims": {
+    "symbolic_benchmark": "executed",
+    "visual_synthetic_benchmark": "executed",
+    "browsergym_bridge": "implemented and mock-tested",
+    "miniwob_public_score": "not claimed"
+  },
+  "main_visual_result": {
+    "uniform_mean": 0.43300000252202153,
+    "failforge_hardmine_mean": 0.4918750021606684,
+    "difference": 0.05887499963864683,
+    "positive_seeds": 4,
+    "n_seeds": 4,
+    "paired_p_value": 0.033380153439759766,
+    "cohen_dz": 1.8692242376063133
+  },
+  "verifier_stress": {
+    "full_shortcut_rate": 0.00062499998603015,
+    "no_verifier_shortcut_rate": 0.27437499910593033,
+    "full_genuine_accuracy": 0.8093750029802322,
+    "no_verifier_genuine_accuracy": 0.5781249925494194
+  },
+  "files": {
+    "paper": "FAILFORGE_paper_submission_draft.md",
+    "benchmark_card": "BENCHMARK_CARD.md",
+    "reviewer_attack": "REVIEWER_ATTACK_AND_RESPONSE.md",
+    "reproducibility": "REPRODUCIBILITY_STATEMENT.md",
+    "website": "project_webpage/index.html"
+  }
+}

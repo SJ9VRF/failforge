@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FAILFORGE — Failure-Conditioned Synthetic RL for Computer-Use Agents</title>
+<meta name="description" content="FAILFORGE studies whether verified failures can shape the next synthetic training environments for visual computer-use agents. Executed symbolic and visual experiments, verifier ablations, long-horizon evaluation, and reproducibility artifacts.">
+<meta property="og:title" content="FAILFORGE — Failure-Conditioned Synthetic RL for Computer-Use Agents">
+<meta property="og:description" content="A reproducible research project on failure-conditioned curricula, trajectory verification, visual OOD robustness, and long-horizon GUI agents.">
+<meta property="og:image" content="assets/og-preview.png">
+<meta name="theme-color" content="#0b1020">
+<link rel="icon" href="assets/favicon.png">
+<link rel="manifest" href="site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<nav class="nav" aria-label="Primary">
+  <div class="nav-inner">
+    <div class="brand">FAILFORGE</div>
+    <div class="nav-links">
+      <a href="#overview">Overview</a><a href="#method">Method</a><a href="#results">Results</a>
+      <a href="#failures">Failures</a><a href="#demo">Demo</a><a href="#safety">Safety</a><a href="#reproduce">Reproduce</a>
+    </div>
+    <div class="nav-cta">
+      <a class="btn" href="downloads/FAILFORGE_paper_FULL_WITH_APPENDIX.md">Paper</a>
+      <a class="btn primary" href="downloads/FAILFORGE_FINAL_COMPLETE_PACKAGE.zip">Code package</a>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+<section class="hero" id="overview">
+  <div>
+    <div class="eyebrow">Computer Use · GUI Agents · RL · Multimodal Agents · Agent Evaluation</div>
+    <h1>FAILFORGE</h1>
+    <div class="subtitle">Failure-conditioned synthetic reinforcement learning for computer-use agents that must recover, verify, and generalize across changing interfaces.</div>
+    <div class="domain-row">
+      <span class="pill">Computer Use</span><span class="pill">GUI Agents</span><span class="pill">RL</span>
+      <span class="pill">Multimodal Agents</span><span class="pill">World-Model-like simulation</span><span class="pill">Agent Evals</span>
+    </div>
+    <div class="hero-actions">
+      <a class="btn primary" href="downloads/FAILFORGE_paper_FULL_WITH_APPENDIX.md">Read paper + appendix</a>
+      <a class="btn" href="#demo">Watch agent run</a>
+      <a class="btn" href="downloads/FAILFORGE_FINAL_COMPLETE_PACKAGE.zip">View code package</a>
+      <a class="btn soft" href="downloads/STATISTICAL_ROBUSTNESS_REPORT.md">Technical report</a>
+    </div>
+    <div class="claim">Contribution: verified trajectory failures are converted into the next training distribution—mixed with exploration and replay instead of discarded as unusable episodes.</div>
+  </div>
+  <div class="demo-shell" id="demo">
+    <img src="assets/failforge_demo.gif" alt="Animated synthetic computer-use trajectory showing a wrong interaction, failure detection, popup recovery, verification, and successful completion.">
+    <div class="demo-cap">Executed project environment, visualized as a short trajectory. Shows failure + recovery, not only a cherry-picked success.</div>
+  </div>
+</section>
+
+<section class="section slim">
+  <div class="callout"><span class="kicker">One-sentence research claim</span><br>
+  In this controlled visual benchmark, selecting new synthetic training examples from the agent's verified failure frontier improves combined visual OOD robustness over uniform factor sampling, while trajectory-aware verification suppresses shortcut exploitation.</div>
+</section>
+
+<section class="section">
+  <h2>TL;DR</h2>
+  <div class="tldr">
+    <div class="item"><strong>Problem</strong><span>GUI agents can perform plausible local actions yet collapse after interface shifts, missed verification, or long trajectories.</span></div>
+    <div class="item"><strong>Core idea</strong><span>Use failures to choose the next worlds the agent trains on—not just to score or discard trajectories.</span></div>
+    <div class="item"><strong>What I built</strong><span>Symbolic + screenshot-based environments, failure taxonomy, verifier, adaptive sampler, evaluation harness, and BrowserGym/MiniWoB bridge.</span></div>
+    <div class="item"><strong>Main result</strong><span>FAILFORGE-HardMine: 49.2% vs 43.3% combined visual OOD, +5.9 pp across 4/4 matched seeds.</span></div>
+    <div class="item"><strong>Why it matters</strong><span>Computer-use agents need training signals for recovery and trajectory integrity, not only more successful demonstrations.</span></div>
+  </div>
+</section>
+
+<section class="section" id="problem">
+  <h2>The problem</h2>
+  <p class="lede">Computer use is brittle because the state distribution changes after every action. One wrong click can create a new world the policy was never trained to recover from.</p>
+  <div class="grid">
+    <div class="card"><div class="kicker">State drift</div><h3>Local actions look right; the global task is lost.</h3><p>Long-horizon execution compounds small errors and stale assumptions.</p></div>
+    <div class="card"><div class="kicker">Dynamic UI</div><h3>Popups and layout shifts break memorized interaction patterns.</h3><p>The agent must detect that the world changed and re-enter a valid trajectory.</p></div>
+    <div class="card"><div class="kicker">Weak reward</div><h3>Outcome-only success can reward shortcuts.</h3><p>An apparent final state may hide skipped verification or evaluator exploitation.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Motivation</h2>
+  <div class="two">
+    <div class="card">
+      <h3>What changed the project</h3>
+      <p>The first visual RL-from-scratch run collapsed toward easy global actions instead of learning grounding. Then task-category failure reweighting also failed to reliably beat uniform synthetic training.</p>
+      <p>Those negative results changed the hypothesis: the useful unit is not the failure category—it is the concrete failed environment configuration.</p>
+    </div>
+    <div class="card">
+      <h3>Initial hypothesis → refined hypothesis</h3>
+      <p><strong>Initial:</strong> failure-aware curricula should beat uniform synthetic RL.</p>
+      <p><strong>Refined:</strong> failure conditioning helps when it operates at the example/environment level and is calibrated against exploration and replay.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Research questions</h2>
+  <div class="three">
+    <div class="card"><div class="kicker">RQ1</div><h3>Does failure-conditioned example selection improve visual OOD robustness?</h3><p>Metric: combined visual OOD action accuracy on matched seeds.</p></div>
+    <div class="card"><div class="kicker">RQ2</div><h3>Does trajectory-aware verification reduce reward hacking?</h3><p>Metrics: shortcut rate and genuine task accuracy under a hack-heavy stress test.</p></div>
+    <div class="card"><div class="kicker">RQ3</div><h3>Does local competence translate to long-horizon completion?</h3><p>Metrics: checkpoint accuracy, ≥80% completion, and exact completion as horizon grows.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Hypotheses</h2>
+  <div class="grid">
+    <div class="card"><h3>H1 — Failure frontier</h3><p>Example-level failure mining should outperform uniform factor sampling on combined OOD.</p></div>
+    <div class="card"><h3>H2 — Verifier integrity</h3><p>Removing trajectory-aware correction should increase shortcut exploitation and reduce genuine success.</p></div>
+    <div class="card"><h3>H3 — Horizon gap</h3><p>Exact completion should decay faster than checkpoint competence as task horizon increases.</p></div>
+  </div>
+</section>
+
+<section class="section" id="method">
+  <h2>Core insight</h2>
+  <p class="lede">A failed GUI trajectory is not just a bad datapoint. It describes a part of the state distribution the current policy cannot handle. FAILFORGE turns that description into the next training distribution.</p>
+  <div class="figure">
+    <img src="assets/architecture.svg" alt="FAILFORGE architecture: screenshot and goal go to policy, environment, verifier, failure memory, counterfactual forge, and a training mixture of failure examples, exploration, and replay.">
+    <div class="caption">Architecture. Highlighted components are the project contribution: trajectory verification, structured failure memory, and failure-conditioned environment/example selection.</div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Method</h2>
+  <div class="two">
+    <div class="card"><h3>Inputs → outputs</h3><ul class="list-clean"><li><strong>Input:</strong> screenshot-like observation + goal token.</li><li><strong>Output:</strong> one of 16 spatial clicks, VERIFY, or DISMISS.</li><li><strong>Environment:</strong> procedurally generated visual desktop states with perturbations and interruptions.</li><li><strong>Reward:</strong> terminal task signal corrected by a trajectory-aware verifier.</li></ul></div>
+    <div class="card"><h3>Training distribution</h3><div class="code">p_train(E) = λf · p(E | failures)<br>           + λu · p_uniform(E)<br>           + λr · p_replay(E)</div><p>In the visual implementation, candidate examples are scored by the current policy and low-correct-action-probability examples are preferentially selected.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Agent loop</h2>
+  <div class="figure"><img src="assets/agent_loop.svg" alt="Agent loop: Observe, Interpret, Plan, Act, Verify, Update state, Recover."><div class="caption">Recovery is a first-class transition, not an afterthought outside the agent loop.</div></div>
+</section>
+
+<section class="section">
+  <h2>Environment</h2>
+  <div class="grid">
+    <div class="card"><h3>Visual synthetic desktop</h3><p>32×32 RGB screenshot-like states, 4×4 interaction grid, eight widget types, global VERIFY/DISMISS actions.</p></div>
+    <div class="card"><h3>Controlled shifts</h3><p>Layout shift, noise, occlusion, grayscale/theme changes, dynamic popup state, shortcut traps, and combined OOD.</p></div>
+    <div class="card"><h3>Reproducible reset</h3><p>Procedural generation with deterministic seeds and logged evaluation artifacts; no scraped or private user data.</p></div>
+  </div>
+  <div class="figure"><img src="assets/visual_benchmark_samples.png" alt="Examples of generated benchmark screens for normal, verification, popup, and shortcut-hack states."><div class="caption">Actual generated benchmark samples from the executed visual package.</div></div>
+</section>
+
+<section class="section">
+  <h2>Task examples</h2>
+  <div class="three">
+    <div class="card"><div class="kicker">Simple</div><h3>Simple visual grounding</h3><p><strong>Goal:</strong> Select the target widget from a screenshot.</p><p><strong>Initial state:</strong> Screenshot + goal token</p><p><strong>Success:</strong> Correct spatial click</p></div><div class="card"><div class="kicker">Medium</div><h3>Dynamic recovery</h3><p><strong>Goal:</strong> Handle an unexpected modal before continuing.</p><p><strong>Initial state:</strong> Screenshot + popup state</p><p><strong>Success:</strong> Dismiss/recover, then resume</p></div><div class="card"><div class="kicker">Long-horizon</div><h3>Long-horizon verification</h3><p><strong>Goal:</strong> Maintain task progress across many steps and explicitly verify final state.</p><p><strong>Initial state:</strong> Sequential screenshots + latent state</p><p><strong>Success:</strong> Verified completion, not apparent reward</p></div>
+  </div>
+</section>
+
+<section class="section" id="results">
+  <h2>Results — the 30-second version</h2>
+  <div class="grid">
+    <div class="card"><div class="metric">+5.9 pp</div><h3>Combined visual OOD</h3><p>43.3% UniformFactor-RL → <strong>49.2% FAILFORGE-HardMine</strong>, 4/4 matched seeds positive.</p></div>
+    <div class="card"><div class="metric danger">27.4%</div><h3>Shortcut rate without verifier</h3><p>Versus 0.1% with trajectory-aware verifier correction.</p></div>
+    <div class="card"><div class="metric gold">≈0%</div><h3>Exact completion at long horizons</h3><p>Local checkpoint competence remains much higher, exposing compounding error.</p></div>
+  </div>
+  <div class="figure"><img src="assets/visual_ood_main.png" alt="Bar chart comparing combined visual OOD accuracy for UniformFactor-RL and FAILFORGE-HardMine."><div class="caption">Main visual result. This is a controlled synthetic benchmark result, not a public OSWorld/WeaveBench/MiniWoB SOTA claim.</div></div>
+</section>
+
+<section class="section">
+  <h2>Main results table</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Seed</th><th>UniformFactor-RL</th><th>FAILFORGE-HardMine</th><th>Matched gain</th></tr></thead>
+    <tbody><tr><td>0</td><td>43.5%</td><td class='best'>49.5%</td><td>+6.0 pp</td></tr>
+<tr><td>1</td><td>38.2%</td><td class='best'>48.4%</td><td>+10.2 pp</td></tr>
+<tr><td>2</td><td>52.5%</td><td class='best'>57.0%</td><td>+4.5 pp</td></tr>
+<tr><td>3</td><td>39.1%</td><td class='best'>41.9%</td><td>+2.9 pp</td></tr></tbody>
+  </table></div>
+  <p class="note">4 matched visual seeds; paired p=0.0334 in the executed analysis; Cohen's dz=1.869. The small seed count is disclosed as a limitation.</p>
+</section>
+
+<section class="section">
+  <h2>Generalization & robustness</h2>
+  <div class="two">
+    <div class="figure"><img src="assets/visual_ood_profile.png" alt="Visual robustness profile across individual and combined OOD shifts."><div class="caption">Performance across visual distribution shifts.</div></div>
+    <div class="card"><h3>Evaluated shifts</h3><ul class="list-clean"><li>Unseen layouts / positional changes</li><li>Visual noise and occlusion</li><li>Theme / grayscale perturbation</li><li>Combined OOD transformations</li><li>Unexpected popup state</li><li>Shortcut temptation</li></ul></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Long-horizon evaluation</h2>
+  <div class="figure"><img src="assets/visual_long_horizon.png" alt="Long-horizon plot showing checkpoint accuracy, partial completion and exact completion as horizon increases."><div class="caption">The key message: local competence is not long-horizon reliability.</div></div>
+  <div class="table-wrap"><table><thead><tr><th>Horizon</th><th>Checkpoint accuracy</th><th>≥80% completion</th><th>Exact completion</th></tr></thead><tbody><tr><td>4</td><td>46.0%</td><td>4.7%</td><td>4.7%</td></tr>
+<tr><td>8</td><td>45.8%</td><td>1.9%</td><td>0.6%</td></tr>
+<tr><td>16</td><td>46.1%</td><td>0.7%</td><td>0.0%</td></tr>
+<tr><td>32</td><td>46.1%</td><td>0.1%</td><td>0.0%</td></tr>
+<tr><td>64</td><td>46.3%</td><td>0.0%</td><td>0.0%</td></tr>
+<tr><td>128</td><td>46.3%</td><td>0.0%</td><td>0.0%</td></tr></tbody></table></div>
+</section>
+
+<section class="section">
+  <h2>Baselines</h2>
+  <div class="grid">
+    <div class="card"><h3>Sparse RL from scratch</h3><p>Negative baseline. Collapsed toward easy global actions and failed to learn reliable visual grounding.</p></div>
+    <div class="card"><h3>UniformFactor-RL</h3><p>Strong visual baseline. Uses the same perturbation factor pool without failure-conditioned selection.</p></div>
+    <div class="card"><h3>Task-level failure reweighting</h3><p>Negative baseline. Reweighting broad failure categories did not reliably outperform uniform synthetic training.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Ablations</h2>
+  <div class="two">
+    <div class="figure"><img src="assets/hard_mining_ablation.png" alt="Hard-example mixture ablation showing a non-monotonic relationship between hard-example ratio and OOD accuracy."><div class="caption">Hardness/exploration balance is non-monotonic; there is no magic hard-example ratio.</div></div>
+    <div class="table-wrap"><table><thead><tr><th>Variant</th><th>Combined OOD</th><th>SD</th></tr></thead><tbody><tr><td>hard100</td><td>36.4%</td><td>6.9</td></tr>
+<tr><td>hard50</td><td>36.0%</td><td>1.5</td></tr>
+<tr><td>hard75</td><td>32.8%</td><td>5.1</td></tr>
+<tr><td>uniform</td><td>33.2%</td><td>6.7</td></tr></tbody></table></div>
+  </div>
+</section>
+
+<section class="section" id="failures">
+  <h2>Where it still fails</h2>
+  <div class="grid">
+    <div class="card failure"><div class="kicker">Visual grounding</div><h3>Wrong spatial action</h3><p>Cause: ambiguous or shifted visual affordance. Response: mine low-correct-probability counterfactual layouts.</p></div>
+    <div class="card failure"><div class="kicker">Long-horizon drift</div><h3>Locally plausible, globally wrong</h3><p>Cause: compounding error and missing hierarchical state. Next: memory, subgoal verification, plan repair.</p></div>
+    <div class="card failure"><div class="kicker">Reward hacking</div><h3>Apparent success without task intent</h3><p>Frequency rises sharply when the verifier is removed; trajectory integrity must be audited.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Qualitative trajectory</h2>
+  <div class="figure"><img src="assets/trajectory_case_study.png" alt="Six-step synthetic computer-use trajectory from observation to wrong click, failure detection, popup recovery, verification, and success."><div class="caption">Failure → detection → recovery → verified success. The failed state is retained as training evidence rather than discarded.</div></div>
+</section>
+
+<section class="section" id="safety">
+  <h2>Safety & reliability</h2>
+  <p class="lede">The executed safety evidence in this project is about reward integrity and shortcut behavior. Additional production safety controls are design requirements, not claimed experiments.</p>
+  <div class="grid">
+    <div class="card success"><h3>Implemented / evaluated</h3><ul class="list-clean"><li>Trajectory-aware verifier</li><li>Shortcut / reward-hacking detection</li><li>Invalid-action penalties</li><li>Recovery-state logging</li><li>Explicit verification requirement</li></ul></div>
+    <div class="card"><h3>Production-adjacent design requirements</h3><ul class="list-clean"><li>Irreversible-action confirmation</li><li>Permission boundaries</li><li>Sensitive-data handling</li><li>Sandboxing and audit logs</li><li>Prompt-injection / external-content trust checks</li></ul></div>
+    <div class="card"><h3>Why separate them?</h3><p>Only the first set is supported by executed experiments here. The second set belongs in the next safety extension and is not presented as completed.</p></div>
+  </div>
+  <div class="figure"><img src="assets/visual_verifier_ablation.png" alt="Verifier ablation comparing genuine accuracy and shortcut rate with and without verifier correction."><div class="caption">Removing verifier correction increased visual shortcut selection from about 0.1% to 27.4%.</div></div>
+</section>
+
+<section class="section">
+  <h2>Evaluation design</h2>
+  <div class="two">
+    <div class="card"><h3>Success is not one number</h3><ul class="list-clean"><li>Action / checkpoint accuracy</li><li>Partial completion</li><li>Exact completion</li><li>Genuine accuracy</li><li>Shortcut rate</li><li>Verifier score</li></ul></div>
+    <div class="card"><h3>Leakage & integrity</h3><p>Environment generation is procedural; the verifier does not choose actions at inference. Real public benchmark scores are not claimed because the browser stack could not be installed in this runtime.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Evaluation harness</h2>
+  <div class="grid">
+    <div class="card"><h3>Automatic task generation</h3><p>Procedural visual states and controlled perturbations.</p></div>
+    <div class="card"><h3>Trajectory logging</h3><p>Actions, rewards, termination, failure tags, verifier score, and shortcuts.</p></div>
+    <div class="card"><h3>Adaptive replay</h3><p>Failure frontier + uniform exploration + competence replay.</p></div>
+    <div class="card"><h3>Failure taxonomy</h3><p>Grounding, verification, recovery, drift, stagnation, reward hacking.</p></div>
+    <div class="card"><h3>Seed protocol</h3><p>Deterministic matched-seed comparisons and raw CSV artifacts.</p></div>
+    <div class="card"><h3>Public benchmark bridge</h3><p>BrowserGym/MiniWoB adapter, task discovery, sampler, verifier, logging, mock-tested.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Dataset</h2>
+  <div class="card">
+    <p><strong>Source:</strong> fully procedural synthetic observations and trajectories generated by the local benchmark; no personal or scraped user data.</p>
+    <p><strong>Categories:</strong> grounding, verification, popup recovery, shortcut stress, visual OOD, and long-horizon composition.</p>
+    <p><strong>Train/test:</strong> generated from separate seeded distributions and OOD perturbation conditions. Raw experimental CSVs and configs are included in the downloadable project package.</p>
+    <p><strong>Licensing/privacy:</strong> benchmark content is synthetic. Third-party BrowserGym/MiniWoB dependencies retain their own upstream licenses and are not redistributed as benchmark results.</p>
+  </div>
+</section>
+
+<section class="section" id="reproduce">
+  <h2>Reproduce</h2>
+  <p class="lede">The site links directly to the executed result packages, configs, scripts, and reproducibility record.</p>
+  <div class="two">
+    <div class="code"># Validate the local bridge logic
+cd failforge_browsergym_bridge
+PYTHONPATH=. python scripts/run_mock_bridge.py
+
+# Real MiniWoB (requires a networked/browser-enabled runtime)
+pip install browsergym-miniwob
+playwright install chromium
+export MINIWOB_URL=&lt;your MiniWoB URL&gt;
+PYTHONPATH=. python scripts/run_miniwob_failforge.py --episodes 100 --seed 0</div>
+    <div class="card">
+      <h3>Downloads</h3>
+      <p><a href="downloads/FAILFORGE_PAPER_FULL_AND_ALL_RESULTS.zip">Paper + all results</a></p>
+      <p><a href="downloads/FAILFORGE_VISUAL_COMPLETE.zip">Visual benchmark package</a></p>
+      <p><a href="downloads/FAILFORGE_BROWSERGYM_BRIDGE_COMPLETE.zip">BrowserGym bridge</a></p>
+      <p><a href="downloads/REPRODUCIBILITY_STATEMENT.md">Reproducibility statement</a></p>
+      <p><a href="downloads/manifest.json">Artifact manifest</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Built as a reproducible research system</h2>
+  <div class="grid">
+    <div class="card"><h3>Modular environments</h3><p>Environment adapters separate benchmark logic from policy-specific code.</p></div>
+    <div class="card"><h3>Deterministic seeds</h3><p>Matched comparisons and explicit seed protocols.</p></div>
+    <div class="card"><h3>Automatic evaluation</h3><p>CSV logging, verifier metrics, failure categories, and paper-ready plots.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Design decisions</h2>
+  <div class="two">
+    <details open><summary>Why screenshots instead of DOM-only state?</summary><p>The visual benchmark is meant to expose grounding and interface-shift failures that disappear when the policy receives a perfect structured representation.</p></details>
+    <details open><summary>Why trajectory-level verification?</summary><p>Because terminal reward can diverge from task intent. The verifier ablation directly shows shortcut exploitation when that distinction is removed.</p></details>
+    <details><summary>Why synthetic failures instead of only successful demonstrations?</summary><p>Failures reveal the state distribution induced by the current policy. Those states are exactly where recovery and robust computer use must improve.</p></details>
+    <details><summary>Why keep exploration?</summary><p>Failure-only training and fixed hard-example ratios were not reliably best. The experiments support a calibrated mixture rather than a pure hard-mining story.</p></details>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Alternatives considered</h2>
+  <div class="grid">
+    <div class="card failure"><h3>Pure sparse visual RL</h3><p>Did not work: collapsed toward easy global actions.</p></div>
+    <div class="card failure"><h3>Category-level failure curriculum</h3><p>Did not reliably beat a strong uniform synthetic baseline.</p></div>
+    <div class="card"><h3>Example-level hard mining</h3><p>Worked in the controlled visual benchmark, but the best hard/exploration ratio remained non-monotonic.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Cost & efficiency</h2>
+  <div class="warn">No trustworthy production latency/token-cost claim is made here. The executed visual policy is lightweight and local; public benchmark inference cost would depend on the external model attached to the BrowserGym adapter.</div>
+  <p class="lede" style="margin-top:18px">The symbolic training-budget experiment did show saturation: more synthetic experience helped early, then gains plateaued—evidence that environment selection matters after broad exposure saturates.</p>
+</section>
+
+<section class="section">
+  <h2>Scaling discussion</h2>
+  <div class="grid">
+    <div class="card"><h3>10× more tasks</h3><p>Candidate scoring and evaluation become the bottleneck; batching and asynchronous environment workers would matter more than the sampler itself.</p></div>
+    <div class="card"><h3>Richer environments</h3><p>The BrowserGym bridge separates policy, verifier, failure classifier, and environment adapter so the same loop can move beyond the synthetic desktop.</p></div>
+    <div class="card"><h3>Larger models</h3><p>The core question becomes whether failure-conditioned environment selection still adds value once perception is much stronger but long-horizon state/recovery remains difficult.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Limitations</h2>
+  <ul class="list-clean">
+    <li>The main visual benchmark is synthetic and simplified; it is not a substitute for OSWorld, WeaveBench, or real-browser validation.</li>
+    <li>The main visual comparison uses four matched seeds; 8–12 seeds would strengthen a top-tier conference submission.</li>
+    <li>The lightweight policy is not a frontier multimodal model.</li>
+    <li>Exact long-horizon completion remains weak.</li>
+    <li>The BrowserGym/MiniWoB bridge is implemented and mock-tested, but real public benchmark scoring was blocked by runtime network/browser installation limits.</li>
+    <li>Prompt injection and irreversible-action safety are important next extensions, not completed experiments in this package.</li>
+  </ul>
+</section>
+
+<section class="section">
+  <h2>What I learned</h2>
+  <div class="grid">
+    <div class="card"><h3>1. Failures need resolution</h3><p>Broad failure categories were too coarse. The useful training signal emerged at the concrete example/environment level.</p></div>
+    <div class="card"><h3>2. Uniform synthetic is a real baseline</h3><p>More complicated curricula do not deserve credit unless they beat broad coverage on matched conditions.</p></div>
+    <div class="card"><h3>3. Reward integrity is separate from task accuracy</h3><p>The verifier ablation produced the strongest safety result: an apparently successful reward signal can train shortcut behavior.</p></div>
+    <div class="card"><h3>4. Local competence is not reliability</h3><p>Checkpoint accuracy can remain stable while exact long-horizon completion collapses.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>What's next</h2>
+  <div class="three">
+    <div class="card"><h3>Public benchmark validation</h3><p>Run the existing BrowserGym/MiniWoB bridge in a networked browser-enabled environment on matched tasks/seeds.</p></div>
+    <div class="card"><h3>Memory + hierarchical verification</h3><p>Target the long-horizon gap directly instead of only improving local visual robustness.</p></div>
+    <div class="card"><h3>Safety extension</h3><p>Add irreversible-action confirmation and prompt-injection/external-content trust stress tests.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Related work</h2>
+  <div class="card">
+    <ul class="list-clean">
+      <li><strong>OSWorld2.0</strong> — long-horizon real-world computer-use workflows; motivates state, constraint, and verification failures.</li>
+      <li><strong>WeaveBench</strong> — trajectory-aware hybrid computer-use evaluation and shortcut detection.</li>
+      <li><strong>Synthetic Computers at Scale</strong> — shows synthetic computer environments can support long-horizon productivity simulation.</li>
+      <li><strong>BrowserGym / MiniWoB++</strong> — public web-interaction environment family used as the external-validation bridge in this project.</li>
+    </ul>
+    <p class="note">See the paper for full references and exact positioning. This page intentionally avoids a literature dump.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Contribution statement</h2>
+  <div class="card">
+    <p>This project package documents the research question, system design, synthetic environments, failure taxonomy, verifier, adaptive sampler, experiments, statistical analysis, failure analysis, paper draft, and BrowserGym bridge as a single research system.</p>
+    <p><strong>Authorship shown in the paper:</strong> Aura Yavary, UC Davis. The page does not claim public-benchmark results that were not executed.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Project timeline</h2>
+  <div class="timeline">
+    <div class="time-step"><strong>Idea</strong><span>Failure-conditioned synthetic RL for computer use.</span></div>
+    <div class="time-step"><strong>Symbolic prototype</strong><span>Mechanism analysis, replay and verifier sweeps.</span></div>
+    <div class="time-step"><strong>Visual benchmark</strong><span>Screenshot-based GUI tasks and OOD shifts.</span></div>
+    <div class="time-step"><strong>Failure analysis</strong><span>Negative results reshape the method toward example-level hard mining.</span></div>
+    <div class="time-step"><strong>External bridge</strong><span>BrowserGym/MiniWoB adapter implemented and mock-tested.</span></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Paper · Code · Demo</h2>
+  <div class="grid">
+    <div class="card"><h3>Paper</h3><p>Full paper with comprehensive appendix and claim ledger.</p><a class="btn primary" href="downloads/FAILFORGE_paper_FULL_WITH_APPENDIX.md">Open paper</a></div>
+    <div class="card"><h3>Code package</h3><p>Executed results, raw CSVs, visual benchmark, bridge code, configs, reports, and scripts.</p><a class="btn primary" href="downloads/FAILFORGE_FINAL_COMPLETE_PACKAGE.zip">Download package</a></div>
+    <div class="card"><h3>Demo</h3><p>Short failure → recovery → verification trajectory at the top of this page.</p><a class="btn primary" href="#demo">Watch agent run</a></div>
+  </div>
+  <div class="warn" style="margin-top:16px"><strong>GitHub status:</strong> no public repository URL exists in the project artifacts yet, so this site links to the actual downloadable code package rather than inventing a GitHub link. The package is structured to be published as a repository.</div>
+</section>
+</main>
+
+<div class="sticky-actions" aria-label="Quick actions">
+  <a href="downloads/FAILFORGE_paper_FULL_WITH_APPENDIX.md">Paper</a>
+  <a href="downloads/FAILFORGE_FINAL_COMPLETE_PACKAGE.zip">Code</a>
+  <a href="#demo">Demo</a>
+</div>
+
+<footer class="footer">
+  <strong>FAILFORGE</strong><br>
+  Failure-Conditioned Synthetic Reinforcement Learning for Computer-Use Agents.<br>
+  Research-first portfolio page. Claims are limited to executed evidence included in the downloadable artifacts.
+</footer>
+<script src="script.js"></script>
+</body>
+</html>

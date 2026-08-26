@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="520" viewBox="0 0 1400 520">
+<defs>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".14"/>
+  </filter>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L9,3 z" fill="#56627a"/>
+  </marker>
+</defs>
+<rect width="1400" height="520" fill="#fbfcfe"/>
+<text x="70" y="72" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#0b1020">FAILFORGE closed-loop training architecture</text>
+<text x="70" y="104" font-family="Arial, sans-serif" font-size="16" fill="#697386">Failures do not end the trajectory; they reshape the next training distribution.</text>
+
+<!-- row 1 -->
+<g filter="url(#shadow)">
+<rect x="70" y="165" rx="22" ry="22" width="190" height="105" fill="#ffffff" stroke="#dce2ee"/>
+<rect x="300" y="165" rx="22" ry="22" width="190" height="105" fill="#ffffff" stroke="#dce2ee"/>
+<rect x="530" y="165" rx="22" ry="22" width="190" height="105" fill="#ffffff" stroke="#dce2ee"/>
+<rect x="760" y="165" rx="22" ry="22" width="190" height="105" fill="#ffffff" stroke="#dce2ee"/>
+<rect x="990" y="165" rx="22" ry="22" width="190" height="105" fill="#fff6df" stroke="#e7c874"/>
+</g>
+<text x="165" y="205" text-anchor="middle" font-family="Arial" font-size="14" fill="#697386">OBSERVATION</text>
+<text x="165" y="235" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700" fill="#0b1020">Screenshot + goal</text>
+
+<text x="395" y="205" text-anchor="middle" font-family="Arial" font-size="14" fill="#697386">POLICY</text>
+<text x="395" y="235" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700" fill="#0b1020">Interpret + act</text>
+
+<text x="625" y="205" text-anchor="middle" font-family="Arial" font-size="14" fill="#697386">ENVIRONMENT</text>
+<text x="625" y="235" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700" fill="#0b1020">State transition</text>
+
+<text x="855" y="205" text-anchor="middle" font-family="Arial" font-size="14" fill="#697386">VERIFIER</text>
+<text x="855" y="235" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700" fill="#0b1020">Audit trajectory</text>
+
+<text x="1085" y="205" text-anchor="middle" font-family="Arial" font-size="14" fill="#8a6819">FAILURE MEMORY</text>
+<text x="1085" y="235" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700" fill="#0b1020">Diagnose failure</text>
+
+<line x1="260" y1="217" x2="296" y2="217" stroke="#56627a" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="490" y1="217" x2="526" y2="217" stroke="#56627a" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="720" y1="217" x2="756" y2="217" stroke="#56627a" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="950" y1="217" x2="986" y2="217" stroke="#56627a" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+<!-- row 2 -->
+<g filter="url(#shadow)">
+<rect x="370" y="350" rx="22" ry="22" width="245" height="105" fill="#eef8ff" stroke="#9ecdf0"/>
+<rect x="660" y="350" rx="22" ry="22" width="245" height="105" fill="#eef8ff" stroke="#9ecdf0"/>
+</g>
+<text x="492" y="390" text-anchor="middle" font-family="Arial" font-size="14" fill="#477697">COUNTERFACTUAL FORGE</text>
+<text x="492" y="420" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700" fill="#0b1020">Generate/select hard worlds</text>
+<text x="782" y="390" text-anchor="middle" font-family="Arial" font-size="14" fill="#477697">TRAINING MIX</text>
+<text x="782" y="420" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700" fill="#0b1020">Failure + explore + replay</text>
+
+<path d="M1085 270 C1085 330, 900 330, 900 380" fill="none" stroke="#56627a" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="660" y1="402" x2="619" y2="402" stroke="#56627a" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M660 403 C625 403, 625 403, 620 403" fill="none" stroke="#56627a" stroke-width="2.5"/>
+<path d="M370 403 C300 403, 300 305, 395 275" fill="none" stroke="#56627a" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="1015" y="330" font-family="Arial" font-size="14" fill="#697386">verified failures</text>
+<text x="282" y="350" font-family="Arial" font-size="14" fill="#697386">next training round</text>
+
+<text x="70" y="495" font-family="Arial" font-size="14" fill="#697386">Contribution highlighted: trajectory verification + failure-conditioned environment selection + calibrated exploration/replay.</text>
+</svg>

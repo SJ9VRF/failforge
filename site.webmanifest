@@ -1,0 +1,16 @@
+{
+  "name": "FAILFORGE",
+  "short_name": "FAILFORGE",
+  "description": "Failure-Conditioned Synthetic RL for Computer-Use Agents",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F6F8FB",
+  "theme_color": "#0B1220",
+  "icons": [
+    {
+      "src": "assets/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    }
+  ]
+}

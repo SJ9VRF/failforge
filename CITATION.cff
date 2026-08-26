@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use or discuss this project, please cite the project page or paper."
+title: "FAILFORGE: Failure-Conditioned Synthetic Reinforcement Learning for Computer-Use Agents"
+type: software
+authors:
+  - family-names: Yavary
+    given-names: Aura
+date-released: 2026-08-26
+version: 1.0.0
