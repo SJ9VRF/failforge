@@ -116,3 +116,14 @@ The current repo can be used as both the project page and downloadable research 
 ## License
 
 No open-source license is asserted by this website package. Add the license you want before redistributing code as an open-source project.
+
+
+## Editorial visual system
+
+The final page uses a Vogue/editorial-inspired research aesthetic:
+
+- **Cormorant Garamond** for hero headlines, section titles, and editorial callouts.
+- **Inter** for body/UI text.
+- **IBM Plex Mono** for metrics, labels, experiment IDs, and code.
+- Warm ivory background, black typography, oxblood accent, and muted gold evidence highlights.
+- All button/icon states use explicit contrasting foreground colors so icons and labels remain readable.
